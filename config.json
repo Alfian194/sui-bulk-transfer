@@ -1,0 +1,7 @@
+{
+  "rpc": "https://fullnode.mainnet.sui.io",
+  "destination": "0x150ebc490620ce05775803cc55f0e33a16db1a6a7646501cd4b8989343d38799",
+  "leaveSui": 0.0085,
+  "delay": 10000,
+  "ssrType": "0x79f0b9a0862120619e0ed79690c81be28032b63b2b4fb19226dc81f40fa60d03::SSR::SSR"
+}

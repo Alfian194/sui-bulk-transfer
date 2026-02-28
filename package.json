@@ -1,0 +1,18 @@
+{
+  "name": "sui-bulk-transfer",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@mysten/sui": "^1.45.2",
+    "bip39": "^3.1.0",
+    "dotenv": "^17.3.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
