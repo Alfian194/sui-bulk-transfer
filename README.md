@@ -18,8 +18,8 @@ Instalasi
 
 Clone repo ini
 
-bash   git clone https://github.com/Alfian194/sui-bulk-transfer.git
-   cd sui-bulk-transfer
+git clone https://github.com/Alfian194/sui-bulk-transfer.git
+cd sui-bulk-transfer
 
 Install dependencies
 
