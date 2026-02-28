@@ -1,16 +1,21 @@
-require("dotenv").config();
-const fs = require("fs");
-const readline = require("readline");
+import dotenv from "dotenv";
+import fs from "fs";
+import readline from "readline";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { SuiClient } from "@mysten/sui/client";
+import { Transaction } from "@mysten/sui/transactions";
+import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 
-const { SuiClient } = require("@mysten/sui/client");
-const { Ed25519Keypair } = require("@mysten/sui/keypairs/ed25519");
-const { decodeSuiPrivateKey } = require("@mysten/sui/cryptography");
-const { Transaction } = require("@mysten/sui/transactions");
+dotenv.config();
+
+/* ================= LOAD FILE ================= */
 
 const config = JSON.parse(fs.readFileSync("./config.json"));
 const mnemonics = JSON.parse(fs.readFileSync("./mnemonics.json"));
 
 const client = new SuiClient({ url: config.rpc });
+
+/* ================= UTIL ================= */
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -40,6 +45,7 @@ function getMasterKeypair() {
 /* ============================= */
 /* 1️⃣ SEND SUI KE 1 TUJUAN */
 /* ============================= */
+
 async function sendSui() {
   for (let mnemonic of mnemonics) {
     try {
@@ -91,6 +97,7 @@ async function sendSui() {
 /* ============================= */
 /* 2️⃣ SEND SSR KE 1 TUJUAN */
 /* ============================= */
+
 async function sendSSR() {
   for (let mnemonic of mnemonics) {
     try {
@@ -142,6 +149,7 @@ async function sendSSR() {
 /* ================================== */
 /* 3️⃣ MASTER DISTRIBUTE KE SEMUA */
 /* ================================== */
+
 async function masterDistribute() {
   const masterKeypair = getMasterKeypair();
 
