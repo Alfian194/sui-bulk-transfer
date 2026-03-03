@@ -1,145 +1,64 @@
-import dotenv from "dotenv";
-import fs from "fs";
-import readline from "readline";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { SuiClient } from "@mysten/sui/client";
-import { Transaction } from "@mysten/sui/transactions";
-import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
+const fs = require("fs");
+const readline = require("readline");
+require("dotenv").config();
 
-dotenv.config();
+const { SuiClient, getFullnodeUrl } = require("@mysten/sui/client");
+const { Ed25519Keypair } = require("@mysten/sui/keypairs/ed25519");
+const { Transaction } = require("@mysten/sui/transactions");
 
-/* ================= READLINE ================= */
+// ================= CONFIG =================
+const config = JSON.parse(fs.readFileSync("./config.json"));
+const mnemonics = JSON.parse(fs.readFileSync("./mnemonics.json"));
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
+const client = new SuiClient({
+  url: config.rpc || getFullnodeUrl("mainnet"),
 });
 
-function question(prompt) {
-  return new Promise((resolve) => rl.question(prompt, resolve));
-}
+const MIN_DELAY = 3000;
 
-/* ================= SETUP ================= */
+// ================= COLORS =================
+const c = {
+  reset:  "\x1b[0m",
+  cyan:   "\x1b[36m",
+  green:  "\x1b[32m",
+  red:    "\x1b[31m",
+  yellow: "\x1b[33m",
+  white:  "\x1b[37m",
+};
 
-async function runSetup() {
-  console.log("\n=============================");
-  console.log("   SUI BULK TRANSFER SETUP   ");
-  console.log("=============================\n");
+function cyan(text)   { return `${c.cyan}${text}${c.reset}`; }
+function green(text)  { return `${c.green}${text}${c.reset}`; }
+function red(text)    { return `${c.red}${text}${c.reset}`; }
+function yellow(text) { return `${c.yellow}${text}${c.reset}`; }
+function white(text)  { return `${c.white}${text}${c.reset}`; }
 
-  /* ======= CONFIG.JSON ======= */
-  console.log("📋 Setup config.json\n");
-
-  const destination = await question("Masukkan alamat tujuan (destination): ");
-  const leaveSui = await question("Berapa SUI yang ditinggal tiap wallet untuk gas? (contoh: 0.01): ");
-  const delay = await question("Delay antar transaksi dalam ms? (contoh: 1000): ");
-  const ssrType = await question("Coin type SSR (kosongkan jika tidak pakai): ");
-  const rpc = await question("RPC endpoint (Enter untuk default mainnet): ");
-
-  const config = {
-    rpc: rpc.trim() || "https://fullnode.mainnet.sui.io:443",
-    destination: destination.trim(),
-    leaveSui: parseFloat(leaveSui) || 0.01,
-    delay: parseInt(delay) || 1000,
-    ssrType: ssrType.trim() || "",
-  };
-
-  fs.writeFileSync("./config.json", JSON.stringify(config, null, 2));
-  console.log("\n✅ config.json berhasil dibuat!\n");
-
-  /* ======= .ENV ======= */
-  console.log("🔐 Setup .env (untuk fitur Master Distribute)\n");
-  console.log("Pilih metode master wallet:");
-  console.log("1. Private Key");
-  console.log("2. Mnemonic");
-  console.log("3. Lewati (skip)\n");
-
-  const envChoice = await question("Pilih (1/2/3): ");
-
-  if (envChoice === "1") {
-    const privateKey = await question("Masukkan MASTER_PRIVATE_KEY: ");
-    fs.writeFileSync("./.env", `MASTER_PRIVATE_KEY=${privateKey.trim()}\n`);
-    console.log("\n✅ .env berhasil dibuat!\n");
-  } else if (envChoice === "2") {
-    const mnemonic = await question("Masukkan MASTER_MNEMONIC (12 kata): ");
-    fs.writeFileSync("./.env", `MASTER_MNEMONIC=${mnemonic.trim()}\n`);
-    console.log("\n✅ .env berhasil dibuat!\n");
-  } else {
-    console.log("\n⏭️  .env dilewati\n");
-  }
-
-  /* ======= MNEMONICS.JSON ======= */
-  console.log("💼 Setup mnemonics.json\n");
-
-  const mnemonics = [];
-  let addMore = true;
-
-  while (addMore) {
-    const mnemonic = await question(`Masukkan mnemonic wallet ke-${mnemonics.length + 1}: `);
-    mnemonics.push(mnemonic.trim());
-
-    const more = await question("Tambah wallet lagi? (y/n): ");
-    addMore = more.toLowerCase() === "y";
-  }
-
-  fs.writeFileSync("./mnemonics.json", JSON.stringify(mnemonics, null, 2));
-  console.log("\n✅ mnemonics.json berhasil dibuat!\n");
-
-  console.log("=============================");
-  console.log("✅ Setup selesai!");
-  console.log("=============================\n");
-
-  // reload dotenv setelah setup
-  dotenv.config();
-}
-
-/* ================= LOAD FILE ================= */
-
-async function loadFiles() {
-  // Cek apakah file config dan mnemonics sudah ada
-  if (!fs.existsSync("./config.json") || !fs.existsSync("./mnemonics.json")) {
-    console.log("\n⚠️  File config.json atau mnemonics.json tidak ditemukan.");
-    console.log("Menjalankan setup otomatis...\n");
-    await runSetup();
-  }
-
-  const config = JSON.parse(fs.readFileSync("./config.json"));
-  const mnemonics = JSON.parse(fs.readFileSync("./mnemonics.json"));
-  return { config, mnemonics };
-}
-
-/* ================= UTIL ================= */
-
+// ================= HELPER =================
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getKeypairFromMnemonic(mnemonic) {
+function getKeypair(mnemonic) {
   return Ed25519Keypair.deriveKeypair(mnemonic.trim());
 }
 
-function getMasterKeypair() {
-  if (process.env.MASTER_PRIVATE_KEY) {
-    const { secretKey } = decodeSuiPrivateKey(
-      process.env.MASTER_PRIVATE_KEY.trim()
-    );
-    return Ed25519Keypair.fromSecretKey(secretKey);
-  }
-
-  if (process.env.MASTER_MNEMONIC) {
-    return Ed25519Keypair.deriveKeypair(process.env.MASTER_MNEMONIC.trim());
-  }
-
-  return null;
+function getKeypairFromPrivateKey(privateKey) {
+  return Ed25519Keypair.fromSecretKey(privateKey.trim());
 }
 
-/* ============================= */
-/* 1️⃣  SEND SUI KE 1 TUJUAN     */
-/* ============================= */
 
-async function sendSui(client, config, mnemonics) {
-  for (let mnemonic of mnemonics) {
+
+// ================= MENU 1 =================
+async function sendSui() {
+  console.log(cyan("\n========== MENU 1: Send SUI ke 1 Tujuan =========="));
+
+  const total_wallets = mnemonics.length;
+
+  for (let i = 0; i < mnemonics.length; i++) {
+    const start = Date.now();
+    const counter = cyan(`[${i + 1}/${total_wallets}]`);
+
     try {
-      const keypair = getKeypairFromMnemonic(mnemonic);
+      const keypair = getKeypair(mnemonics[i]);
       const address = keypair.getPublicKey().toSuiAddress();
 
       const balance = await client.getBalance({
@@ -148,47 +67,58 @@ async function sendSui(client, config, mnemonics) {
       });
 
       const total = Number(balance.totalBalance) / 1e9;
-      const amount = total - config.leaveSui;
 
-      console.log("\nWallet:", address);
-      console.log("Saldo:", total);
+      console.log(`\n${counter} ${white("Wallet  :")} ${cyan(address)}`);
+      console.log(`       ${white("Saldo   :")} ${white(total + " SUI")}`);
 
-      if (amount <= 0) {
-        console.log("Saldo tidak cukup, skip");
-        continue;
+      const sendAmount = total - config.leaveSui;
+
+      if (sendAmount <= 0) {
+        console.log(`       ${white("Status  :")} ${red("Saldo tidak cukup, skip")}`);
+      } else {
+        const tx = new Transaction();
+        const [coin] = tx.splitCoins(tx.gas, [
+          tx.pure.u64(Math.floor(sendAmount * 1e9)),
+        ]);
+
+        tx.transferObjects([coin], tx.pure.address(config.destination));
+
+        const result = await client.signAndExecuteTransaction({
+          signer: keypair,
+          transaction: tx,
+        });
+
+        await client.waitForTransaction({ digest: result.digest });
+
+        console.log(`       ${white("Kirim   :")} ${white(sendAmount.toFixed(6) + " SUI")}`);
+        console.log(`       ${white("Sisa    :")} ${white(config.leaveSui + " SUI")}`);
+        console.log(`       ${white("Tujuan  :")} ${white(config.destination)}`);
+        console.log(`       ${white("Digest  :")} ${yellow(result.digest)}`);
+        console.log(`       ${white("Status  :")} ${green("Berhasil ✓")}`);
       }
-
-      const tx = new Transaction();
-      const [coin] = tx.splitCoins(tx.gas, [
-        tx.pure.u64(Math.floor(amount * 1e9)),
-      ]);
-
-      tx.transferObjects([coin], tx.pure.address(config.destination));
-
-      const result = await client.signAndExecuteTransaction({
-        signer: keypair,
-        transaction: tx,
-      });
-
-      console.log("SUI terkirim:", result.digest);
-
-      await sleep(config.delay);
     } catch (err) {
-      console.log("Error:", err.message);
+      console.log(`       ${white("Error   :")} ${red(err.message)}`);
     }
+
+    await sleep(Math.max(0, MIN_DELAY - (Date.now() - start)));
   }
 
+  console.log(cyan("\n========== Selesai ==========\n"));
   process.exit();
 }
 
-/* ============================= */
-/* 2️⃣  SEND SSR KE 1 TUJUAN     */
-/* ============================= */
+// ================= MENU 2 =================
+async function sendSSR(amountPerWallet) {
+  console.log(cyan("\n========== MENU 2: Send SSR ke 1 Tujuan =========="));
 
-async function sendSSR(client, config, mnemonics) {
-  for (let mnemonic of mnemonics) {
+  const total_wallets = mnemonics.length;
+
+  for (let i = 0; i < mnemonics.length; i++) {
+    const start = Date.now();
+    const counter = cyan(`[${i + 1}/${total_wallets}]`);
+
     try {
-      const keypair = getKeypairFromMnemonic(mnemonic);
+      const keypair = getKeypair(mnemonics[i]);
       const address = keypair.getPublicKey().toSuiAddress();
 
       const coins = await client.getCoins({
@@ -196,48 +126,79 @@ async function sendSSR(client, config, mnemonics) {
         coinType: config.ssrType,
       });
 
-      if (!coins.data.length) {
-        console.log("\nWallet:", address);
-        console.log("Tidak ada SSR, skip");
-        continue;
+      if (coins.data.length === 0) {
+        console.log(`\n${counter} ${white("Wallet  :")} ${cyan(address)}`);
+        console.log(`       ${white("Status  :")} ${red("Tidak ada SSR, skip")}`);
+      } else {
+        let totalBalance = 0;
+        coins.data.forEach((c) => (totalBalance += Number(c.balance)));
+        const totalSSR = totalBalance / 1e9;
+
+        if (amountPerWallet > totalSSR) {
+          console.log(`\n${counter} ${white("Wallet  :")} ${cyan(address)}`);
+          console.log(`       ${white("Saldo   :")} ${white(totalSSR + " SSR")}`);
+          console.log(`       ${white("Status  :")} ${red("Saldo SSR tidak cukup, skip")}`);
+        } else {
+          const tx = new Transaction();
+          const primaryCoin = tx.object(coins.data[0].coinObjectId);
+
+          // Merge semua coin SSR jika lebih dari 1
+          if (coins.data.length > 1) {
+            tx.mergeCoins(
+              primaryCoin,
+              coins.data.slice(1).map((c) => tx.object(c.coinObjectId))
+            );
+          }
+
+          // Split sesuai jumlah yang diminta lalu transfer
+          const [splitCoin] = tx.splitCoins(primaryCoin, [
+            tx.pure.u64(Math.floor(amountPerWallet * 1e9)),
+          ]);
+
+          tx.transferObjects([splitCoin], tx.pure.address(config.destination));
+
+          const result = await client.signAndExecuteTransaction({
+            signer: keypair,
+            transaction: tx,
+          });
+
+          await client.waitForTransaction({ digest: result.digest });
+
+          console.log(`\n${counter} ${white("Wallet  :")} ${cyan(address)}`);
+          console.log(`       ${white("Saldo   :")} ${white(totalSSR + " SSR")}`);
+          console.log(`       ${white("Kirim   :")} ${white(amountPerWallet + " SSR")}`);
+          console.log(`       ${white("Tujuan  :")} ${white(config.destination)}`);
+          console.log(`       ${white("Digest  :")} ${yellow(result.digest)}`);
+          console.log(`       ${white("Status  :")} ${green("Berhasil ✓")}`);
+        }
       }
-
-      let total = 0;
-      coins.data.forEach((c) => (total += Number(c.balance)));
-
-      const tx = new Transaction();
-      const [coin] = tx.splitCoins(tx.object(coins.data[0].coinObjectId), [
-        tx.pure.u64(total),
-      ]);
-
-      tx.transferObjects([coin], tx.pure.address(config.destination));
-
-      const result = await client.signAndExecuteTransaction({
-        signer: keypair,
-        transaction: tx,
-      });
-
-      console.log("\nWallet:", address);
-      console.log("SSR terkirim:", result.digest);
-
-      await sleep(config.delay);
     } catch (err) {
-      console.log("Error:", err.message);
+      console.log(`\n${counter} ${white("Error   :")} ${red(err.message)}`);
     }
+
+    await sleep(Math.max(0, MIN_DELAY - (Date.now() - start)));
   }
 
+  console.log(cyan("\n========== Selesai ==========\n"));
   process.exit();
 }
 
-/* ================================== */
-/* 3️⃣  MASTER DISTRIBUTE KE SEMUA    */
-/* ================================== */
+// ================= MENU 3 =================
+async function sendFromMaster(amountPerWallet) {
+  console.log(cyan("\n========== MENU 3: Master Kirim ke Semua Wallet =========="));
 
-async function masterDistribute(client, config, mnemonics) {
-  const masterKeypair = getMasterKeypair();
+  const masterPrivateKey = process.env.MASTER_PRIVATE_KEY;
 
-  if (!masterKeypair) {
-    console.log("MASTER key tidak ditemukan di .env");
+  if (!masterPrivateKey) {
+    console.log(red("Error: MASTER_PRIVATE_KEY tidak ditemukan di .env"));
+    return;
+  }
+
+  let masterKeypair;
+  try {
+    masterKeypair = getKeypairFromPrivateKey(masterPrivateKey);
+  } catch {
+    console.log(red("Error: MASTER_PRIVATE_KEY format salah"));
     return;
   }
 
@@ -249,25 +210,35 @@ async function masterDistribute(client, config, mnemonics) {
   });
 
   const total = Number(balance.totalBalance) / 1e9;
+  const totalNeeded = amountPerWallet * mnemonics.length;
 
-  console.log("\nMaster:", masterAddress);
-  console.log("Saldo:", total);
+  console.log(`\n${white("Master       :")} ${cyan(masterAddress)}`);
+  console.log(`${white("Saldo Master :")} ${white(total + " SUI")}`);
+  console.log(`${white("Per Wallet   :")} ${white(amountPerWallet + " SUI")}`);
+  console.log(`${white("Jumlah Wallet:")} ${white(mnemonics.length)}`);
+  console.log(`${white("Total Kirim  :")} ${white(totalNeeded.toFixed(6) + " SUI")}`);
 
-  if (total <= config.leaveSui) {
-    console.log("Saldo master tidak cukup");
+  if (total < totalNeeded) {
+    console.log(red(`\nError: Saldo tidak cukup! Butuh ${totalNeeded.toFixed(6)} SUI untuk ${mnemonics.length} wallet`));
+    process.exit();
     return;
   }
 
-  const perWallet = (total - config.leaveSui) / mnemonics.length;
+  console.log(white("\n---------------------------------------------------"));
 
-  for (let mnemonic of mnemonics) {
+  const total_wallets = mnemonics.length;
+
+  for (let i = 0; i < mnemonics.length; i++) {
+    const start = Date.now();
+    const counter = cyan(`[${i + 1}/${total_wallets}]`);
+
     try {
-      const wallet = getKeypairFromMnemonic(mnemonic);
-      const address = wallet.getPublicKey().toSuiAddress();
+      const keypair = getKeypair(mnemonics[i]);
+      const address = keypair.getPublicKey().toSuiAddress();
 
       const tx = new Transaction();
       const [coin] = tx.splitCoins(tx.gas, [
-        tx.pure.u64(Math.floor(perWallet * 1e9)),
+        tx.pure.u64(Math.floor(amountPerWallet * 1e9)),
       ]);
 
       tx.transferObjects([coin], tx.pure.address(address));
@@ -277,33 +248,77 @@ async function masterDistribute(client, config, mnemonics) {
         transaction: tx,
       });
 
-      console.log("Kirim ke", address, result.digest);
+      await client.waitForTransaction({ digest: result.digest });
 
-      await sleep(config.delay);
+      console.log(`\n${counter} ${white("Kirim ke :")} ${cyan(address)}`);
+      console.log(`       ${white("Jumlah   :")} ${white(amountPerWallet + " SUI")}`);
+      console.log(`       ${white("Digest   :")} ${yellow(result.digest)}`);
+      console.log(`       ${white("Status   :")} ${green("Berhasil ✓")}`);
     } catch (err) {
-      console.log("Error:", err.message);
+      console.log(`\n${counter} ${white("Error    :")} ${red(err.message)}`);
     }
+
+    await sleep(Math.max(0, MIN_DELAY - (Date.now() - start)));
   }
 
+  console.log(cyan("\n========== Selesai ==========\n"));
   process.exit();
 }
 
-/* ================= MAIN ================= */
+// ================= CLI =================
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
-async function main() {
-  const { config, mnemonics } = await loadFiles();
-  const client = new SuiClient({ url: config.rpc });
+console.clear();
+console.log(cyan(" ██╗  ██╗███████╗██╗   ██╗     █████╗ ███╗   ██╗████████╗███████╗██╗  ██╗"));
+console.log(cyan(" ██║  ██║██╔════╝╚██╗ ██╔╝    ██╔══██╗████╗  ██║╚══██╔══╝██╔════╝██║ ██╔╝"));
+console.log(cyan(" ███████║█████╗   ╚████╔╝     ███████║██╔██╗ ██║   ██║   █████╗  █████╔╝ "));
+console.log(cyan(" ██╔══██║██╔══╝    ╚██╔╝      ██╔══██║██║╚██╗██║   ██║   ██╔══╝  ██╔═██╗ "));
+console.log(cyan(" ██║  ██║███████╗   ██║       ██║  ██║██║ ╚████║   ██║   ███████╗██║  ██╗"));
+console.log(cyan(" ╚═╝  ╚═╝╚══════╝   ╚═╝       ╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝"));
+console.log(cyan(""));
+console.log(cyan(" █████╗ ███████╗███████╗███╗   ██╗ ██████╗ "));
+console.log(cyan("██╔══██╗██╔════╝██╔════╝████╗  ██║██╔════╝ "));
+console.log(cyan("███████║███████╗█████╗  ██╔██╗ ██║██║  ███╗"));
+console.log(cyan("██╔══██║╚════██║██╔══╝  ██║╚██╗██║██║   ██║"));
+console.log(cyan("██║  ██║███████║███████╗██║ ╚████║╚██████╔╝"));
+console.log(cyan("╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝ ╚═════╝ "));
+console.log(yellow("\n                  SUI Wallet Automation"));
+console.log(white("                     by @Alfian194\n"));
 
-  console.log("\n1. Send SUI ke 1 tujuan");
-  console.log("2. Send SSR ke 1 tujuan");
-  console.log("3. Master kirim ke semua wallet");
+console.log(cyan("╔══════════════════════════════════╗"));
+console.log(cyan("║") + white("  1. Send SUI ke 1 tujuan         ") + cyan("║"));
+console.log(cyan("║") + white("  2. Send SSR ke 1 tujuan         ") + cyan("║"));
+console.log(cyan("║") + white("  3. Master kirim ke semua wallet ") + cyan("║"));
+console.log(cyan("╚══════════════════════════════════╝"));
 
-  rl.question("\nPilih menu: ", (menu) => {
-    if (menu === "1") sendSui(client, config, mnemonics);
-    else if (menu === "2") sendSSR(client, config, mnemonics);
-    else if (menu === "3") masterDistribute(client, config, mnemonics);
-    else process.exit();
-  });
-}
-
-main();
+rl.question(white("\nPilih menu: "), (menu) => {
+  if (menu === "1") {
+    sendSui();
+  } else if (menu === "2") {
+    rl.question(white("Jumlah SSR per wallet: "), (amount) => {
+      const amountPerWallet = parseFloat(amount);
+      if (isNaN(amountPerWallet) || amountPerWallet <= 0) {
+        console.log(red("Error: Jumlah tidak valid"));
+        process.exit();
+      } else {
+        sendSSR(amountPerWallet);
+      }
+    });
+  } else if (menu === "3") {
+    rl.question(white("Jumlah SUI per wallet: "), (amount) => {
+      const amountPerWallet = parseFloat(amount);
+      if (isNaN(amountPerWallet) || amountPerWallet <= 0) {
+        console.log(red("Error: Jumlah tidak valid"));
+        process.exit();
+      } else {
+        sendFromMaster(amountPerWallet);
+      }
+    });
+  } else {
+    console.log(red("Error: Menu tidak valid"));
+    process.exit();
+  }
+});
