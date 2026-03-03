@@ -30,10 +30,14 @@ npm install @mysten/sui dotenv
 cp mnemonics.example.json mnemonics.json
 nano mnemonics.json
 ```
+CTRL + SHIFT + V ( untuk paste di nano )
+CTRL+ X → Y → Enter ( untuk keluar dari nano ) 
 ```bash
 cp .env.example .env
 nano .env
 ```
+CTRL + SHIFT + V ( untuk paste di nano )
+CTRL+ X → Y → Enter ( untuk keluar dari nano ) 
 
 **4. Jalankan Script**
 ```bash
