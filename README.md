@@ -14,30 +14,29 @@ Script otomatis untuk mengirim SUI dan SSR token ke banyak wallet sekaligus.
 
 ## Menjalankan di Codespace
 
-### 1. Buka di Codespace Dan Clone Repository
-``` 
+**1. Clone Repository**
+```bash
 git clone https://github.com/Alfian194/sui-bulk-transfer.git
-
 cd sui-bulk-transfer
+```
 
-### 2. Install Dependencies
+**2. Install Dependencies**
 ```bash
 npm install @mysten/sui dotenv
 ```
 
-### 3. Buat File Konfigurasi
+**3. Buat File Konfigurasi**
 ```bash
-# Buat config.json
 nano config.json
-
-# Buat mnemonics.json
+```
+```bash
 nano mnemonics.json
-
-# Buat .env
+```
+```bash
 nano .env
 ```
 
-### 4. Jalankan Script
+**4. Jalankan Script**
 ```bash
 npm start
 ```
@@ -46,32 +45,48 @@ npm start
 
 ## Menjalankan di Termux
 
-### 1. Install Termux
+**1. Install Termux**
+
 Download Termux dari [F-Droid](https://f-droid.org/packages/com.termux/) (disarankan) atau Google Play Store.
 
-### 2. Install Node.js & Git
+**2. Install Node.js & Git**
 ```bash
 pkg update && pkg upgrade
 pkg install nodejs git
 ```
 
-### 3. Clone Repository
+**3. Clone Repository**
 ```bash
 git clone https://github.com/Alfian194/sui-bulk-transfer.git
 cd sui-bulk-transfer
 ```
 
-### 4. Install Dependencies
+**4. Install Dependencies**
 ```bash
 npm install @mysten/sui dotenv
+```
+
+**5. Buat File Konfigurasi**
+```bash
+nano config.json
+```
+```bash
+nano mnemonics.json
+```
+```bash
+nano .env
+```
+
+**6. Jalankan Script**
+```bash
+npm start
 ```
 
 ---
 
 ## Konfigurasi
 
-### config.json
-Buat file `config.json` di folder project:
+**config.json**
 ```json
 {
   "rpc": "",
@@ -86,8 +101,7 @@ Buat file `config.json` di folder project:
 - `leaveSui` — jumlah SUI yang disisakan di setiap wallet (Menu 1)
 - `ssrType` — coin type SSR token
 
-### mnemonics.json
-Buat file `mnemonics.json` berisi daftar mnemonic wallet:
+**mnemonics.json**
 ```json
 [
   "word1 word2 word3 ... word12",
@@ -95,25 +109,9 @@ Buat file `mnemonics.json` berisi daftar mnemonic wallet:
 ]
 ```
 
-### .env
-Buat file `.env` berisi private key master wallet (untuk Menu 3):
+**.env**
 ```
 MASTER_PRIVATE_KEY=suiprivkey1qzg...
-```
-
----
-
-## Menjalankan Script
-
-```bash
-npm start
-```
-
-Pilih menu yang tersedia:
-```
-1. Send SUI ke 1 tujuan
-2. Send SSR ke 1 tujuan
-3. Master kirim ke semua wallet
 ```
 
 ---
@@ -123,3 +121,4 @@ Pilih menu yang tersedia:
 - Pastikan saldo SUI master wallet cukup sebelum menjalankan Menu 3
 - Script akan otomatis skip wallet yang saldonya tidak cukup
 - Delay antar wallet adalah 3 detik setelah transaksi terkonfirmasi
+- Jangan bagikan file `mnemonics.json` dan `.env` ke siapapun
