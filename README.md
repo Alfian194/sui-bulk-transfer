@@ -89,16 +89,18 @@ npm start
 **config.json**
 ```json
 {
-  "rpc": "",
-  "destination": "0xALAMAT_TUJUAN",
+  "rpc": "https://fullnode.mainnet.sui.io",
+  "destination": " ISI ADDRESS KAMU ",
   "leaveSui": 0.0085,
-  "ssrType": "0xTYPE_SSR_TOKEN"
+  "delay": 3000,
+  "ssrType": "0x79f0b9a0862120619e0ed79690c81be28032b63b2b4fb19226dc81f40fa60d03::SSR::SSR"
 }
 ```
 
-- `rpc` — kosongkan untuk pakai mainnet default
+- `rpc` — RPC endpoint mainnet SUI
 - `destination` — alamat tujuan pengiriman SUI dan SSR
 - `leaveSui` — jumlah SUI yang disisakan di setiap wallet (Menu 1)
+- `delay` — delay antar wallet dalam milidetik
 - `ssrType` — coin type SSR token
 
 **mnemonics.json**
