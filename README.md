@@ -15,7 +15,7 @@ Script otomatis untuk mengirim SUI dan SSR token ke banyak wallet sekaligus.
 ## Menjalankan di Codespace
 
 ### 1. Buka di Codespace Dan Clone Repository
-git clone https://github.com/Alfian194/sui-bulk-transfer.git
+``` git clone https://github.com/Alfian194/sui-bulk-transfer.git
 
 cd sui-bulk-transfer
 
