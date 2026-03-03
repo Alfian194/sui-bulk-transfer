@@ -1,72 +1,124 @@
-Sui Bulk Transfer
-Script untuk bulk send koin di jaringan SUI — bisa kirim SUI atau SSR dari banyak wallet sekaligus, atau distribute dari 1 master wallet ke banyak wallet.
+# SUI Wallet Automation
 
-Fitur
+Script otomatis untuk mengirim SUI dan SSR token ke banyak wallet sekaligus.
 
-Send SUI ke 1 tujuan dari banyak wallet
-Send SSR ke 1 tujuan dari banyak wallet
-Master Distribute — kirim SUI dari 1 wallet ke banyak wallet sekaligus
+---
 
+## Fitur
 
-Persyaratan
+- **Menu 1** — Kirim SUI dari semua wallet ke 1 tujuan (menyisakan saldo sesuai config)
+- **Menu 2** — Kirim SSR token dari semua wallet ke 1 tujuan (input manual jumlah per wallet)
+- **Menu 3** — Master wallet kirim SUI ke semua wallet (input manual jumlah per wallet)
 
-Node.js v18 atau lebih baru
-npm
+---
 
+## Menjalankan di Codespace
 
-Instalasi
-
-Clone repo ini
-
+### 1. Buka di Codespace Dan Clone Repository
 git clone https://github.com/Alfian194/sui-bulk-transfer.git
+
 cd sui-bulk-transfer
 
-Install dependencies
+### 2. Install Dependencies
+```bash
+npm install @mysten/sui dotenv
+```
 
-bash   npm install
+### 3. Buat File Konfigurasi
+```bash
+# Buat config.json
+nano config.json
 
-Konfigurasi
-1. File .env
-Buat file .env di root folder, isi dengan:
-MASTER_PRIVATE_KEY=suiprivkey1xxxxxxxxxxxxxxxx
+# Buat mnemonics.json
+nano mnemonics.json
 
-File ini hanya dibutuhkan jika menggunakan fitur Master Distribute.
+# Buat .env
+nano .env
+```
 
+### 4. Jalankan Script
+```bash
+npm start
+```
 
-2. File config.json
-Sesuaikan isi config.json:
-json{
-  "rpc": "https://fullnode.mainnet.sui.io:443",
-  "destination": "0xALAMAT_TUJUAN_KAMU",
-  "leaveSui": 0.01,
-  "delay": 1000,
-  "ssrType": "0xSSR_COIN_TYPE"
+---
+
+## Menjalankan di Termux
+
+### 1. Install Termux
+Download Termux dari [F-Droid](https://f-droid.org/packages/com.termux/) (disarankan) atau Google Play Store.
+
+### 2. Install Node.js & Git
+```bash
+pkg update && pkg upgrade
+pkg install nodejs git
+```
+
+### 3. Clone Repository
+```bash
+git clone https://github.com/Alfian194/sui-bulk-transfer.git
+cd sui-bulk-transfer
+```
+
+### 4. Install Dependencies
+```bash
+npm install @mysten/sui dotenv
+```
+
+---
+
+## Konfigurasi
+
+### config.json
+Buat file `config.json` di folder project:
+```json
+{
+  "rpc": "",
+  "destination": "0xALAMAT_TUJUAN",
+  "leaveSui": 0.0085,
+  "ssrType": "0xTYPE_SSR_TOKEN"
 }
-FieldKeteranganrpcRPC endpoint jaringan SUIdestinationAlamat tujuan pengirimanleaveSuiSisa SUI yang ditinggal di wallet (untuk gas)delayJeda antar transaksi dalam milidetikssrTypeCoin type untuk token SSR
+```
 
-3. File mnemonics.json
-Buat file mnemonics.json berisi daftar mnemonic wallet:
-json[
-  "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12",
-  "word1 word2 word3 ..."
+- `rpc` — kosongkan untuk pakai mainnet default
+- `destination` — alamat tujuan pengiriman SUI dan SSR
+- `leaveSui` — jumlah SUI yang disisakan di setiap wallet (Menu 1)
+- `ssrType` — coin type SSR token
+
+### mnemonics.json
+Buat file `mnemonics.json` berisi daftar mnemonic wallet:
+```json
+[
+  "word1 word2 word3 ... word12",
+  "word1 word2 word3 ... word12"
 ]
+```
 
-⚠️ JANGAN share file ini ke siapapun!
+### .env
+Buat file `.env` berisi private key master wallet (untuk Menu 3):
+```
+MASTER_PRIVATE_KEY=suiprivkey1qzg...
+```
 
+---
 
-Cara Menjalankan
-bashnode index.js ATAU npm start
+## Menjalankan Script
 
-Nanti akan muncul menu:
+```bash
+npm start
+```
+
+Pilih menu yang tersedia:
+```
 1. Send SUI ke 1 tujuan
 2. Send SSR ke 1 tujuan
 3. Master kirim ke semua wallet
+```
 
-Pilih menu:
-Ketik angka sesuai pilihan lalu tekan Enter.
+---
 
-⚠️ Peringatan Keamanan
+## Catatan
 
-Jangan pernah share file .env dan mnemonics.json
-Pastikan kedua file tersebut ada di .gitignore
-Gunakan di jaringan testnet dulu sebelum mainnet
+- Pastikan saldo SUI master wallet cukup sebelum menjalankan Menu 3
+- Script akan otomatis skip wallet yang saldonya tidak cukup
+- Delay antar wallet adalah 3 detik setelah transaksi terkonfirmasi
