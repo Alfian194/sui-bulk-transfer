@@ -46,7 +46,7 @@ npm start
 
 **1. Install Termux**
 
-Download Termux dari [F-Droid](https://f-droid.org/packages/com.termux/) (disarankan) atau Google Play Store.
+Download Termux dari Google Play Store.
 
 **2. Install Node.js & Git**
 ```bash
