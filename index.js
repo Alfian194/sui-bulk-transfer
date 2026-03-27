@@ -1,3 +1,4 @@
+
 const fs = require("fs");
 const readline = require("readline");
 require("dotenv").config();
@@ -44,8 +45,6 @@ function getKeypair(mnemonic) {
 function getKeypairFromPrivateKey(privateKey) {
   return Ed25519Keypair.fromSecretKey(privateKey.trim());
 }
-
-
 
 // ================= MENU 1 =================
 async function sendSui() {
@@ -108,8 +107,9 @@ async function sendSui() {
 }
 
 // ================= MENU 2 =================
-async function sendSSR(amountPerWallet) {
-  console.log(cyan("\n========== MENU 2: Send SSR ke 1 Tujuan =========="));
+// Self transfer - kirim semua SSR ke diri sendiri
+async function selfTransferSSR() {
+  console.log(cyan("\n========== MENU 2: Self Transfer SSR =========="));
 
   const total_wallets = mnemonics.length;
 
@@ -134,43 +134,33 @@ async function sendSSR(amountPerWallet) {
         coins.data.forEach((c) => (totalBalance += Number(c.balance)));
         const totalSSR = totalBalance / 1e9;
 
-        if (amountPerWallet > totalSSR) {
-          console.log(`\n${counter} ${white("Wallet  :")} ${cyan(address)}`);
-          console.log(`       ${white("Saldo   :")} ${white(totalSSR + " SSR")}`);
-          console.log(`       ${white("Status  :")} ${red("Saldo SSR tidak cukup, skip")}`);
-        } else {
-          const tx = new Transaction();
-          const primaryCoin = tx.object(coins.data[0].coinObjectId);
+        const tx = new Transaction();
+        const primaryCoin = tx.object(coins.data[0].coinObjectId);
 
-          // Merge semua coin SSR jika lebih dari 1
-          if (coins.data.length > 1) {
-            tx.mergeCoins(
-              primaryCoin,
-              coins.data.slice(1).map((c) => tx.object(c.coinObjectId))
-            );
-          }
-
-          // Split sesuai jumlah yang diminta lalu transfer
-          const [splitCoin] = tx.splitCoins(primaryCoin, [
-            tx.pure.u64(Math.floor(amountPerWallet * 1e9)),
-          ]);
-
-          tx.transferObjects([splitCoin], tx.pure.address(config.destination));
-
-          const result = await client.signAndExecuteTransaction({
-            signer: keypair,
-            transaction: tx,
-          });
-
-          await client.waitForTransaction({ digest: result.digest });
-
-          console.log(`\n${counter} ${white("Wallet  :")} ${cyan(address)}`);
-          console.log(`       ${white("Saldo   :")} ${white(totalSSR + " SSR")}`);
-          console.log(`       ${white("Kirim   :")} ${white(amountPerWallet + " SSR")}`);
-          console.log(`       ${white("Tujuan  :")} ${white(config.destination)}`);
-          console.log(`       ${white("Digest  :")} ${yellow(result.digest)}`);
-          console.log(`       ${white("Status  :")} ${green("Berhasil ✓")}`);
+        // Merge semua coin SSR jika lebih dari 1
+        if (coins.data.length > 1) {
+          tx.mergeCoins(
+            primaryCoin,
+            coins.data.slice(1).map((c) => tx.object(c.coinObjectId))
+          );
         }
+
+        // Transfer semua SSR ke diri sendiri
+        tx.transferObjects([primaryCoin], tx.pure.address(address));
+
+        const result = await client.signAndExecuteTransaction({
+          signer: keypair,
+          transaction: tx,
+        });
+
+        await client.waitForTransaction({ digest: result.digest });
+
+        console.log(`\n${counter} ${white("Wallet  :")} ${cyan(address)}`);
+        console.log(`       ${white("Saldo   :")} ${white(totalSSR + " SSR")}`);
+        console.log(`       ${white("Kirim   :")} ${white(totalSSR + " SSR")}`);
+        console.log(`       ${white("Tujuan  :")} ${green("Diri Sendiri")}`);
+        console.log(`       ${white("Digest  :")} ${yellow(result.digest)}`);
+        console.log(`       ${white("Status  :")} ${green("Berhasil ✓")}`);
       }
     } catch (err) {
       console.log(`\n${counter} ${white("Error   :")} ${red(err.message)}`);
@@ -290,7 +280,7 @@ console.log(white("                     by @Alfian194\n"));
 
 console.log(cyan("╔══════════════════════════════════╗"));
 console.log(cyan("║") + white("  1. Send SUI ke 1 tujuan         ") + cyan("║"));
-console.log(cyan("║") + white("  2. Send SSR ke 1 tujuan         ") + cyan("║"));
+console.log(cyan("║") + white("  2. Self Transfer SSR            ") + cyan("║"));
 console.log(cyan("║") + white("  3. Master kirim ke semua wallet ") + cyan("║"));
 console.log(cyan("╚══════════════════════════════════╝"));
 
@@ -298,15 +288,7 @@ rl.question(white("\nPilih menu: "), (menu) => {
   if (menu === "1") {
     sendSui();
   } else if (menu === "2") {
-    rl.question(white("Jumlah SSR per wallet: "), (amount) => {
-      const amountPerWallet = parseFloat(amount);
-      if (isNaN(amountPerWallet) || amountPerWallet <= 0) {
-        console.log(red("Error: Jumlah tidak valid"));
-        process.exit();
-      } else {
-        sendSSR(amountPerWallet);
-      }
-    });
+    selfTransferSSR();
   } else if (menu === "3") {
     rl.question(white("Jumlah SUI per wallet: "), (amount) => {
       const amountPerWallet = parseFloat(amount);
